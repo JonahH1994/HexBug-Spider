@@ -6,8 +6,8 @@ import matplotlib.pyplot as plt
 import functions_tcp
 #import ViconTrackerPoseHandler
 
-TCP_IP = '192.168.137.101'
-TCP_PORT = 80
+TCP_IP = 'Enter IP Address'
+TCP_PORT = 'Enter Port Address' # should be the same as that on the esp8266
  
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 s.connect((TCP_IP, TCP_PORT))
