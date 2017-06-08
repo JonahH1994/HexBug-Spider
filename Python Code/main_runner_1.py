@@ -7,9 +7,6 @@ import functions_tcp
 import hexBug_1 as hx
 import threading as td 
 
-#UDP_IP = '192.168.137.101'
-#UDP_PORT = 80
-
 def checkBugs( bugs ):
 
 	l = len( bugs ) 
