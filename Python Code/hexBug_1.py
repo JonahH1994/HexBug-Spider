@@ -184,7 +184,6 @@ class hexBug(object):
 
 			self.soc.send( b's' )
 
-
 		self.motionStart = 0
 		self.close()
 

@@ -1,11 +1,13 @@
 import socket
 import numpy as np
 import sys
+import csv
 import time
 import matplotlib.pyplot as plt
 import functions_tcp
 import hexBug_1 as hx
 import threading as td 
+from datetime import datetime
 
 def checkBugs( bugs ):
 
@@ -142,8 +144,9 @@ for xy in zip( x_cord, y_cord ):
 plt.show() 
 """
 
+
+#plt.ion() 
 """
-plt.ion() 
 plt.figure(1)
 plt.plot( x_cord, y_cord, 'o' )
 plt.plot( x, y, 'b*' )
@@ -157,8 +160,10 @@ for xy in zip( x_cord, y_cord ):
 	plt.annotate('(%s)' % labels[i], xy=xy, textcoords='data')
 	i += 1
 
-plt.show() 
+plt.show()
 """
+
+array = []
 
 
 #while hexBugs[0].motionStart == 1:
@@ -169,11 +174,28 @@ while checkBugs( hexBugs ) == 1:
 	#print( hexBugs[0].orientation )
 	#bot.set_ydata( hexBugs[0].r0[1] )
 	#bot.set_xdata( hexBugs[0].r0[0] )
-	print( "Previous Position: " + str( hexBugs[0].prevR[0:2] ) )
-	print( "Current Position: " + str( hexBugs[0].r0[0:2] ) )
+	#print( "Previous Position: " + str( hexBugs[0].prevR[0:2] ) )
+	#print( "Current Position: " + str( hexBugs[0].r0[0:2] ) )
 	#print( "Final Destination: " + str( [x_cord,y_cord] ) )
 	#fig.canvas.draw()
+	array.append( hexBugs[0].r0[0:2] )
 
 print( "Final Destination: " + str( [x_cord,y_cord] ) )
+
+"""
+f = open( 'hexBugTraj_' + str(datetime.now()) + '.csv', 'wt')
+
+try:
+    writer = csv.writer(f)
+    writer.writerow( ('X position', 'Y Position') )
+    print( 'Writing trajectory to a file.' )
+    for i in range(len(array)):
+        writer.writerow( array[i][0], array[i][1] )
+
+    print('Done writing.' )
+finally:
+    f.close()
+"""
+
 input(  "Motion has ended. Press enter to continue: " )
 #hb1.writeToTCP( r, thes )
