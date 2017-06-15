@@ -9,6 +9,8 @@ import hexBug_1 as hx
 import threading as td 
 from datetime import datetime
 
+path1 = r"C:\Users\Jonah\OneDrive - Cornell University\Summer 2017\Research\Bot Trajectories\ "
+
 def checkBugs( bugs ):
 
 	l = len( bugs ) 
@@ -42,7 +44,7 @@ for i in range(n):
 	y.append( r[1] )
 
 # axis dimension
-dim = 3
+dim = 2
 
 #define HexBug1:
 #vic_port = 51001
@@ -101,8 +103,8 @@ while p != []:
 	j += 1
 """
 
-plt.ylim( -(dim+1), (dim+1) )
-plt.xlim( -(dim+1), (dim+1) )
+plt.ylim( -dim, dim )
+plt.xlim( -dim, dim )
 plt.grid()
 
 plt.plot( x, y, '*' )
@@ -195,31 +197,31 @@ array = []
 
 #while hexBugs[0].motionStart == 1:
 while checkBugs( hexBugs ) == 1:
-	i = 0
+
 	time.sleep(1)
-	#print( hexBugs[0].r0 )
-	#print( hexBugs[0].orientation )
-	#bot.set_ydata( hexBugs[0].r0[1] )
-	#bot.set_xdata( hexBugs[0].r0[0] )
-	#print( "Previous Position: " + str( hexBugs[0].prevR[0:2] ) )
-	#print( "Current Position: " + str( hexBugs[0].r0[0:2] ) )
-	#print( "Final Destination: " + str( [x_cord,y_cord] ) )
-	#fig.canvas.draw()
+	ray = []
+	for i in range( len(hexBugs) ):
+		ray.append( hexBugs[i].r0[0:2] )
+
+	if len(hexBugs) > 1:
+		ray = np.concatenate(ray, axis=0)
 	array.append( hexBugs[0].r0[0:2] )
 
-#print( "Final Destination: " + str( [x_cord,y_cord] ) )
-#array = np.concatenate( array, axis=0 )
-#array.reshape(-1)
 print( "Final Destination: " + str( hexBugs[0].r0[0:2] ) )
 
-f = open( 'hexBugTraj_' + str(datetime.now().strftime('%Y_%m_%d_%H_%M_%S')) + '.csv', 'w',  newline='')
+f = open( path1 + 'hexBugTraj_' + str(datetime.now().strftime('%Y_%m_%d_%H_%M_%S')) + '.csv', 'w',  newline='')
 
 try:
 
     print( 'Writing trajectory to a file.' )
 
     writer = csv.writer(f, delimiter=',')
-    writer.writerow( ["X position", "Y Position"] )
+    labs = []
+    for i in range( len( hexBugs ) ):
+    	labs.append( ["X Position", "Y Position"] )
+
+    labs = np.concatenate(labs, axis=0)
+    writer.writerow( labs )
     for i in range( len(array) ):
     	writer.writerow(array[i])
 
@@ -234,3 +236,4 @@ finally:
     f.close()
 
 input(  "Motion has ended. Press enter to continue: " )
+sys.exit()

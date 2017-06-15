@@ -35,8 +35,9 @@ class hexBug(object):
 		self.orientation = 0
 		self.mot_const = 3.69 
 		self.rot_const = 4.0675/ ( 2 * np.pi )
-		self.tolerance = 0.05 # 0.1
-		self.calib_tol = 0.025
+		self.tolerance = 0.03 # 0.1
+		self.angVicTol = 0.02
+		self.calib_tol = 0.01
 		self.angTol = np.pi/30
 		self.hexB = vt.ViconTrackerPoseHandler(None, None, "", vic_port, name )
 		self.thread1 = td.Thread(target=self.updatePo, args=() )
@@ -48,6 +49,7 @@ class hexBug(object):
 		self.motionStart = 0
 		time.sleep(2)
 		self.__calibrate()
+		#self.__ang_calibrate()
 		time.sleep(2)
 		self.orientThread = td.Thread(target=self.findOrientation, args=() )
 		self.orientThread.daemon = True 
@@ -164,15 +166,17 @@ class hexBug(object):
 				self.__fwd_back( r )
 
 
-			print( "Doing things" )
+			print( "!!!!!!!!!!!! POSITION " + str( i+1 ) + " !!!!!!!!!" )
 			time.sleep(1)
-			while ( np.abs( x - self.r0[0] ) > self.tolerance ) and ( np.abs( y - self.r0[1] ) > self.tolerance ):
-			#while( np.sqrt( (x-self.r0[0])^2 + (y-self.r0[1])^2 ) > self.tolerance):
+			#while ( np.abs( x - self.r0[0] ) > self.tolerance ) and ( np.abs( y - self.r0[1] ) > self.tolerance ):
+			curR = np.sqrt( (x-self.r0[0])**2 + (y-self.r0[1])**2 ) 
+
+			while( curR > self.tolerance):
 
 				self.findOrientation() 
 				if np.abs( the - self.orientation ) > self.angTol :
 
-					print( "Fixing Orientation" )
+					#print( "Fixing Orientation" )
 					r1, th1 = self.cordToRad( self.r0[0:2], pos[i], self.r0[2] )
 					self.__rig_lef( th1 )
 					self.__fwd_back( r1 )
@@ -181,6 +185,8 @@ class hexBug(object):
 				#print( "Still moving to position " + str(i+1) )
 				#print( self.orientation )
 				#print( the )
+
+				curR = np.sqrt( (x-self.r0[0])**2 + (y-self.r0[1] )**2 ) 
 
 			self.soc.send( b's' )
 
@@ -203,23 +209,29 @@ class hexBug(object):
 
 		if the < 0:
 
-			self.soc.send( b'l' )
-			print( "left" )
+			if ( np.abs(the)*self.rot_const > np.pi/4 ) :
+				self.soc.send( b'l' )
+			else:
+				self.soc.send( b'o' )
+			#print( "left" )
 
 		else:
 
-			self.soc.send( b'j' )
-			print( "right" )
+			if ( the*self.rot_const > np.pi/4 ):
+				self.soc.send( b'j' )
+			else:
+				self.soc.send(b'u')
+			#print( "right" )
 
 		#time.sleep( np.abs( the * self.rot_const ) )
 		#self.s.send( b's' )
 		#time.sleep(1)
 
-		print( "Rotating")
+		#print( "Rotating")
 		#while np.abs( the - self.r0[2] ) > self.angTol :
 		#self.orientThread.pause()
 		time.sleep( np.abs(the) * self.rot_const )
-		print( "Done Rotating")
+		#print( "Done Rotating")
 		self.orientation = the 
 
 		self.soc.send( b's' )
@@ -288,7 +300,7 @@ class hexBug(object):
 		mag = np.sqrt( np.dot( nor, nor ) )
 		#print( nor/mag )
 
-		if mag > self.tolerance or self.cali == True:
+		if mag > self.angVicTol or self.cali == True:
 
 			self.orientation = self.arccos2( self.prevR[0:2], self.r0[0:2]  )
 			self.prevR = self.r0 
@@ -300,13 +312,26 @@ class hexBug(object):
 		tol = self.calib_tol
 		self.prevR = self.r0 
 		self.soc.send(b'i')
-		while( np.abs( self.prevR[0] - self.r0[0] ) < tol or np.abs( self.prevR[1] - self.r0[1] ) < tol ):
+		radd = np.sqrt( ( self.prevR[0] - self.r0[0] )**2 + ( self.prevR[1] - self.r0[1] )**2 )
+		#while( np.abs( self.prevR[0] - self.r0[0] ) < tol or np.abs( self.prevR[1] - self.r0[1] ) < tol ):
+		while( radd < tol ):
 			# do nothing
 			self.tolerance = self.tolerance
-			#print( "Still here" )
-			#print( self.r0 )
+			radd = np.sqrt( ( self.prevR[0] - self.r0[0] )**2 + ( self.prevR[1] - self.r0[1] )**2 )
+			
 		self.soc.send(b's')
 
 		self.findOrientation()
 		self.cali = False 
 		print( self.orientation )
+
+	def __ang_calibrate( self ):
+
+		th1 = self.orientation
+		self.soc.send(b'j')
+		time.sleep(2)
+		self.soc.send(b's')
+		self.__calibrate()
+		th2 = self.orientation
+
+		self.rot_const = 2.0/ np.abs( th1 - th2 )
