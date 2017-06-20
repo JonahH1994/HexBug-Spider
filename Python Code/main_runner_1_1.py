@@ -43,6 +43,15 @@ for i in range(n):
 	x.append( r[0] )
 	y.append( r[1] )
 
+if len( hexBugs ) > 1:
+
+	for i in range( len(hexBugs) ):
+
+		for j in range( len(hexBugs) ):
+
+			if i != j:
+				hexBugs[i].bots.append( hexBugs[j] )
+
 # axis dimension
 dim = 2
 

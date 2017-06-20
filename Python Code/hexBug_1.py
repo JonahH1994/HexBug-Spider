@@ -38,6 +38,11 @@ class hexBug(object):
 		self.tolerance = 0.03 # 0.1
 		self.angVicTol = 0.02
 		self.calib_tol = 0.01
+		self.phi = 0.1
+		self.radarAngle = 45 # in degrees
+		self.radiCirc = 1
+		self.obstacles = 1
+		self.bots = []
 		self.angTol = np.pi/30
 		self.hexB = vt.ViconTrackerPoseHandler(None, None, "", vic_port, name )
 		self.thread1 = td.Thread(target=self.updatePo, args=() )
@@ -144,6 +149,20 @@ class hexBug(object):
 
 		self.motionStart = 1
 		time.sleep(1)
+		self.__runner( pos, 1 )
+		self.motionStart = 0
+		self.close()
+
+	def __runner( self, pos, radr=None ):
+
+		thr = 0
+
+		"""
+		if radr ~= None
+			thr = td.Thread(target=self.__radar, args=() )
+			thr.start()
+
+		"""
 
 		for i in range( len( pos ) ): 
 
@@ -174,6 +193,22 @@ class hexBug(object):
 			while( curR > self.tolerance):
 
 				self.findOrientation() 
+
+				if radr != None:
+
+					self.__radar()
+					self.findOrientation()
+					curR = np.sqrt( (x-self.r0[0])**2 + (y-self.r0[1])**2 ) 
+
+				"""
+				else:
+
+					print( 'Radar triggered  by bot ' + self.name )
+					print( 'moving to x: ' + str( x ) + ' y: ' + str( y ) )
+					print( 'current position x: ' + str( self.r0[0]) + ' y: ' + str( self.r0[1] ) )
+
+				"""
+
 				if np.abs( the - self.orientation ) > self.angTol :
 
 					#print( "Fixing Orientation" )
@@ -189,9 +224,6 @@ class hexBug(object):
 				curR = np.sqrt( (x-self.r0[0])**2 + (y-self.r0[1] )**2 ) 
 
 			self.soc.send( b's' )
-
-		self.motionStart = 0
-		self.close()
 
 	def __fwd_back(self, r ):
 
@@ -335,3 +367,97 @@ class hexBug(object):
 		th2 = self.orientation
 
 		self.rot_const = 2.0/ np.abs( th1 - th2 )
+
+	"""
+	def obstacleDetection( self ):
+
+		r = 0
+
+		for i in range( len(self.bots ) ):
+
+			xM = self.r0[0]
+			yM = self.r0[1]
+
+			r1 = self.bots[i].getPos()
+			xO = r1[0]
+			yO = r1[1]
+
+			r = np.sqrt( (xO-xM)**2 + (yO-yM)**2 )
+
+			if r < self.radiCirc:
+
+				self.obstacles = 2
+
+	"""
+	
+	def __radar( self ):
+
+		d = 0
+		r = 0.5
+		r_crit = 0.3
+
+		angle = (np.pi/180) * self.radarAngle # 35 degree	
+		the = self.orientation
+
+		p1 = self.r0[0:2] + [r * np.cos(the),r * np.sin(the)] # [ x + r*cos(the), y + r*sin(the) ]
+		p2 = self.r0[0:2] + [r * np.cos(the+angle), r * np.sin(the+angle)] # [ x + r*cos(the+angle), y + r*sin(the+angle) ]
+		p3 = self.r0[0:2] + [r * np.cos(the-angle), r * np.sin(the-angle)] #[ x + r*cos(the-angle), y + r*sin(the-angle) ]
+
+		for i in range( len(self.bots) ):
+
+			dis = self.bots[i].getPos()[0:2] - self.r0[0:2]
+			d = np.sqrt( np.dot( dis, dis ) )
+			ang = self.arccos2( p1-self.r0[0:2], dis )
+
+			#print( 'current distance for bot ' + str( i ) + ' is ' + str( d ) )
+			#print( 'current angle for bot ' + str( i ) + ' is ' + str( ang ) )
+
+			if d < r and np.abs( ang ) < angle:
+
+				# Bot is within the radar of this
+
+				print( 'within radar of ' + self.name )
+
+				if d < r_crit:
+
+					# need to avoid the other bot
+					# the diameter of the circle that both bots will traverse is "dis"
+					diam = d
+					rad = d 
+					phi = self.phi
+
+					# the center of the circle coordinates is:
+					#r_cent =  0.5 * ( self.r0[0:2] + self.bots[i].getPos()[0:2] )
+					r_cent = self.bots[i].getPos()[0:2]
+					ang1 = self.arccos2( self.r0[0:2] - r_cent, [1,0] ) # angle between the radius vector to this and x axis
+
+					#j = 1
+
+					print( 'critical radius from ' + self.name )
+
+					self.obstacles = 2
+
+					while d < r_crit: # or np.abs( ang ) < angle:
+
+						#newR = r_cent + [rad * np.cos( ang1-phi*j), rad * np.sin(ang1-phi*j)]
+						newR = r_cent + [rad * np.cos( ang1-phi), rad * np.sin(ang1-phi)]
+						pos = []
+						pos.append( newR )
+
+						self.__runner( pos )
+
+						the = self.orientation
+
+						p1 = self.r0[0:2] + [r * np.cos(the),r * np.sin(the)] # [ x + r*cos(the), y + r*sin(the) ]
+						p2 = self.r0[0:2] + [r * np.cos(the+angle), r * np.sin(the+angle)] # [ x + r*cos(the+angle), y + r*sin(the+angle) ]
+						p3 = self.r0[0:2] + [r * np.cos(the-angle), r * np.sin(the-angle)] #[ x + r*cos(the-angle), y + r*sin(the-angle) ]
+
+						dis = self.bots[i].getPos()[0:2] - self.r0[0:2]
+						d = np.sqrt( np.dot( dis, dis ) )
+
+						#ang = self.arccos2( p1-self.r0[0:2], dis )
+						ang1 = self.arccos2( self.r0[0:2] - r_cent, [1,0] )
+
+						#j = j + 1
+
+					self.obstacles = 1
